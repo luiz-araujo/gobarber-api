@@ -3,6 +3,10 @@ dist
 .vscode/
 build/
 temp/
+.env
+
+coverage
+ormconfig.json
 
 tmp/*
 !tmp/.gitkeep
