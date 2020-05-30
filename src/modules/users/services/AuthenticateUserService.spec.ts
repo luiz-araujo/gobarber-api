@@ -1,82 +1,59 @@
-import FakeHashProvider from '@modules/users/providers/HashProvider/fakes/FakeHashProvider';
-
-import FakeUsersRepository from '@modules/users/repositories/fakes/FakeUsersRepository';
-import User from '@modules/users/infra/typeorm/entities/User';
 import AppError from '@shared/errors/AppError';
 
+import FakeUsersRepository from '@modules/users/repositories/fakes/FakeUsersRepository';
+import FakeHashProvider from '@modules/users/providers/HashProvider/fakes/FakeHashProvider';
 import AuthenticateUserService from './AuthenticateUserService';
-import CreateUserService from './CreateUserService';
+
+let fakeUsersRepository: FakeUsersRepository;
+let fakeHashProvider: FakeHashProvider;
+let authenticateUser: AuthenticateUserService;
 
 describe('AuthenticateUser', () => {
-  it('should authenticate an user', async () => {
-    const fakeUsersRepository = new FakeUsersRepository();
-    const fakeHashProvider = new FakeHashProvider();
+  beforeEach(() => {
+    fakeUsersRepository = new FakeUsersRepository();
+    fakeHashProvider = new FakeHashProvider();
 
-    const createUserService = new CreateUserService(
+    authenticateUser = new AuthenticateUserService(
       fakeUsersRepository,
       fakeHashProvider,
     );
+  });
 
-    const authenticateUserService = new AuthenticateUserService(
-      fakeUsersRepository,
-      fakeHashProvider,
-    );
-
-    await createUserService.execute({
+  it('should be able to authenticate', async () => {
+    const user = await fakeUsersRepository.create({
       name: 'John Doe',
-      email: 'johndoe@gmail.com',
+      email: 'johndoe@example.com',
       password: '123456',
     });
 
-    const response = await authenticateUserService.execute({
-      email: 'johndoe@gmail.com',
+    const response = await authenticateUser.execute({
+      email: 'johndoe@example.com',
       password: '123456',
     });
 
-    expect(response.user).toBeInstanceOf(User);
     expect(response).toHaveProperty('token');
+    expect(response.user).toEqual(user);
   });
 
   it('should not be able to authenticate if user does not exist', async () => {
-    const fakeUsersRepository = new FakeUsersRepository();
-    const fakeHashProvider = new FakeHashProvider();
-
-    const authenticateUserService = new AuthenticateUserService(
-      fakeUsersRepository,
-      fakeHashProvider,
-    );
-
-    expect(
-      authenticateUserService.execute({
-        email: 'johndoe@gmail.com',
+    await expect(
+      authenticateUser.execute({
+        email: 'johndoe@example.com',
         password: '123456',
       }),
     ).rejects.toBeInstanceOf(AppError);
   });
 
   it('should not be able to authenticate if the password does not match', async () => {
-    const fakeUsersRepository = new FakeUsersRepository();
-    const fakeHashProvider = new FakeHashProvider();
-
-    const authenticateUserService = new AuthenticateUserService(
-      fakeUsersRepository,
-      fakeHashProvider,
-    );
-
-    const createUserService = new CreateUserService(
-      fakeUsersRepository,
-      fakeHashProvider,
-    );
-
-    await createUserService.execute({
+    await fakeUsersRepository.create({
       name: 'John Doe',
-      email: 'johndoe@gmail.com',
+      email: 'johndoe@example.com',
       password: '123456',
     });
 
-    expect(
-      authenticateUserService.execute({
-        email: 'johndoe@gmail.com',
+    await expect(
+      authenticateUser.execute({
+        email: 'johndoe@example.com',
         password: '654321',
       }),
     ).rejects.toBeInstanceOf(AppError);
